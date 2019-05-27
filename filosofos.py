@@ -8,35 +8,80 @@ import sys
 comm = MPI.COMM_WORLD 
 rank = comm.Get_rank()
 n = comm.Get_size()
+numberOfPhilosopher = n-1
 
 ##SATATES
 # 0 THINKING
 # 1 HUNGRY
 # 2 EATING 
 
-def think(rank):
+def think(pos):
+    state[pos] = 0
     rand = random.randrange(7,10)
-    print('soy el proceso ',rank,'y voy a dormir ', rand)
+    print('soy el proceso ',pos,'y voy a pensar por ', rand)
     sys.stdout.flush()
     time.sleep(rand)
-    print('soy el proceso ',rank,' y acabo de desertar')
+    print('soy el proceso ',pos,' tengo hambre')
     sys.stdout.flush()
 
-def take_forks(rank):
-    down_mutex(rank) # enter critical region
-    state[rank] = 1
-    test(rank)
+def take_forks(pos):
+    down_mutex(pos) # enter critical region
+    #print('rank ',rank,'TERMINE DE ESPERAR')
+    #sys.stdout.flush()
+    #time.sleep(5)
+    state[pos] = 1 # Hungry
+    test(pos) 
     up_mutex()
 
-def test(rank):
-    n=1
+def test(pos):
+    right = (pos+1)%(numberOfPhilosopher)
+    if (typePhilo[pos] == 1):
+        ceroIntetos = True
+        while True:  
+            if (leftFork1[pos]==0):
+                leftFork1[pos]= 1
+                forks1[pos] = 1
+            if (forks1[pos] == 1):
+                if (leftFork1[right]==0):
+                    forks1[pos] = 2
+                    break
+                elif not ceroIntetos:
+                    break
+                else:    
+                    rand = random.randrange(5,15)
+                    time.sleep(rand)
+                    ceroIntetos = False
+    else:    
+        while True:  
+            if (leftFork1[pos]==0):
+                leftFork1[pos]= 1
+                forks1[pos] = 1
+            if (forks1[pos] == 1):
+                if (leftFork1[right] == 0):
+                    forks1[pos] = 2
+                    break 
 
-def down_mutex(rank):
+
+def eat(pos):
+    if (forks1[pos] == 2):
+        print('soy ',pos,' y voy a comer !!!')
+        sys.stdout.flush()
+        state[pos] = 2 #comiendo
+        rand = random.randrange(2,5)
+        time.sleep(rand)
+        
+    else:
+        print('soy ',pos,' y no pude comer')
+        sys.stdout.flush()    
+
+def put_forks(pos):
+    leftFork1[pos] = 0
+    forks1[pos] = 0
+
+def down_mutex(pos):
     while True: 
         if mutex[0] == 1:
             mutex[0] = 0 #bloquea el mutex 
-            print('rank ',rank,'TERMINE DE ESPERAR')
-            sys.stdout.flush()
             break
 
 def up_mutex():
@@ -47,6 +92,7 @@ def up_mutex():
 # create a shared array of size 1000 elements of type double
 size = 1000 
 itemsize = MPI.DOUBLE.Get_size() 
+#print('itemsize', itemsize)
 if rank == 0: 
     nbytes = size * itemsize 
 else: 
@@ -58,53 +104,83 @@ win = MPI.Win.Allocate_shared(nbytes, itemsize, comm=comm)
 buf, itemsize = win.Shared_query(0) 
 assert itemsize == MPI.DOUBLE.Get_size() 
 mutex = np.ndarray(buffer=buf, dtype='d', shape=(size,))
+mutex = mutex[:1]
+typePhilo = np.ndarray(buffer=buf, dtype='d', shape=(size,))
+typePhilo = typePhilo[:numberOfPhilosopher]
 state = np.ndarray(buffer=buf, dtype='d', shape=(size,))
-semaforo = np.ndarray(buffer=buf, dtype='d', shape=(size,))
+state = state[:numberOfPhilosopher]
 forks1 = np.ndarray(buffer=buf, dtype='d', shape=(size,))
+forks1 = forks1[:numberOfPhilosopher]
 leftFork1 = np.ndarray(buffer=buf, dtype='d', shape=(size,))
+leftFork1 = leftFork1[:numberOfPhilosopher]
 ##FINISH
 
 
 if rank == 0:
     t = Texttable()
     typeOfPhilosopher = []
-    forks = []
-    leftFork = []
 
-    for i in range(0,n-1): 
-        typeOfPhilosopher.append('Filosofo ' + str(i) + ' Amigable') 
-        forks.append('0 | x')
-        leftFork.append('x')
+    for i in list(range(0,numberOfPhilosopher)): 
+        typeOfPhilosopher.append('Filosofo ' + str(i) + ' Amigable')
+        typePhilo[i] = 1 #amigable
+        #state[i] = 0
+        #forks.append('0 | x')
+        #leftFork.append('x')
 
+    ant=-1
     for i in list(range(2)):
-        randNumber = random.randrange(0,n-1)
-        typeOfPhilosopher[randNumber] = 'Filosofo ' + str(randNumber) + ' Ambicioso'
+        while True:
+            randNumber = random.randrange(0,numberOfPhilosopher)
+            if randNumber != ant:
+                ant=randNumber
+                typeOfPhilosopher[randNumber] = 'Filosofo ' + str(randNumber) + ' Ambicioso'
+                typePhilo[randNumber] = 2 #ambicioso
+                break
+    
     
 
-    t.add_rows([typeOfPhilosopher,forks,leftFork])
+comm.barrier()
+print('todos llegaron hasta aqui')
+sys.stdout.flush()
+mutex[0] = 1 # initialize mutex availabel
 
+if rank == 0:
     count = 0
-    mutex[0] = 1 # initialize mutex availabel
-
+    t = Texttable()
+    t.add_rows([typeOfPhilosopher,state,typePhilo])
+    print('table: ',count)
+    print (t.draw())
     while True:
+        
         count += 1
         time.sleep(1)
-        print('table: ',count)
         #print(typeOfPhilosopher)
-        #print(forks)
-        #print(leftFork)
-        print (t.draw())
-        #print(mutex[:1])
-        sys.stdout.flush()
+        #print(forks1)
+        #print(leftFork1)
         #print(state[:5])
-        #sys.stdout.flush()
-
+        print(mutex)
+        sys.stdout.flush()
+        print('state:',state)
+        sys.stdout.flush()        
+        print('type:',typePhilo)
+        sys.stdout.flush()
+        
+        #t = Texttable()
+        #t.add_rows([typeOfPhilosopher,state])
+        #print('table: ',count)
+        #print (t.draw())
+        sys.stdout.flush()
+        
 else:
-    #print('acabo de inciar ',rank)    
+    #print('Filosofo numero ',rank, 'acaba de despertar')    
+    pos = rank -1
     while True :
         #PENSANDO
-        think(rank)
-        take_forks(rank)
+        think(pos)
+        print('soy',pos,' voy intentar tomar cubiertos')
+        take_forks(pos)
+        eat(pos)
+        put_forks(pos)
 
 
 
