@@ -70,7 +70,7 @@ def eat(pos):
         print('--------------------------------------------------------------soy ',pos,' y voy a comer !!!')
         sys.stdout.flush()
         state[pos] = 2 #comiendo
-        for j in range(0,int(kPro[pos])):
+        for j in list(range(0,int(kPro[0]))):
             rand = random.randrange(2,5)
             time.sleep(rand)
             print('---------------------------------------------------------- soy',pos, 'termine el trabajo ',j)
@@ -141,7 +141,7 @@ typePhilo = typePhilo[init:init+numberOfPhilosopher]
 init = init+numberOfPhilosopher
 
 kPro = np.ndarray(buffer=buf, dtype='d', shape=(size,))
-kPro= kPro[init:init+numberOfPhilosopher]
+kPro= kPro[init:init+1]
 ##FINISH
 
 
@@ -166,10 +166,9 @@ if rank == 0:
                 typeOfPhilosopher[randNumber] = 'Filosofo ' + str(randNumber) + ' Ambicioso'
                 typePhilo[randNumber] = 2 #ambicioso
                 break
-    
-    for i in list(range(0,numberOfPhilosopher)):  
-        print('digite el k para el proceso: ', i)
-        kPro[i] = input()          
+
+    print('digite el k para los filosofos:')
+    kPro[0] = input()          
 
 
 if rank == 0:
