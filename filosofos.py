@@ -17,17 +17,17 @@ typeOfPhilosopher = []
 # 2 EATING 
 
 def think(pos):
-    state[pos] = 0
     rand = random.randrange(7,10)
     #print('soy el proceso ',pos,'y voy a pensar por ', rand)
-    sys.stdout.flush()
+    #sys.stdout.flush()
     time.sleep(rand)
     #print('soy el proceso ',pos,' tengo hambre')
-    sys.stdout.flush()
+    #sys.stdout.flush()
 
 def take_forks(pos):
     down_mutex(pos) # enter critical region
     print('----------------------------------------------------soy',pos,'INTENTARE TOMAR CUBIERTOS')
+    sys.stdout.flush()
     #sys.stdout.flush()
     state[pos] = 1 # Hungry
     test(pos) 
@@ -50,6 +50,8 @@ def test(pos):
                     break
                 else:    
                     rand = random.randrange(5,15)
+                    print('----------------------------------------------------soy',pos,'INTENTARE TOMAR CUBIERTO DERECHO DENTRO DE', rand)
+                    sys.stdout.flush()
                     time.sleep(rand)
                     ceroIntetos = False
     else:    
@@ -70,18 +72,24 @@ def eat(pos):
         state[pos] = 2 #comiendo
         rand = random.randrange(2,5)
         time.sleep(rand)
+        state[pos] = 0 #se va a pensar
+        print('---------------------------------------------------------- soy',pos, 'y acabo de terminar de comer')
+        sys.stdout.flush()
     else:
-        print('--------------------------------------------------------------soy ',pos,' y no pude comer')
+        print('--------------------------------------------------------------soy ',pos,' y no pude comer asi que ire a pensar con hambre')
         sys.stdout.flush()  
+        #se va a pensar pero sigue con hambre 
 
 def put_forks(pos):
-    right = (pos+1)%(numberOfPhilosopher)
-    leftFork1[pos] = 0
-    leftFork1[right] = 0
-    forks1[pos] = 0
-    print('---------------------------------------------------------- soy',pos, 'y acabo de terminar de comer')
-    sys.stdout.flush()
-    
+    if state[pos] == 1: #todavia tiene hambre
+        forks1[pos] = 0
+        leftFork1[pos] = 0
+    elif state[pos] == 0:    
+        right = (pos+1)%(numberOfPhilosopher)
+        leftFork1[pos] = 0
+        leftFork1[right] = 0
+        forks1[pos] = 0
+
 def down_mutex(pos):
     while True: 
         if mutex[0] == 1:
