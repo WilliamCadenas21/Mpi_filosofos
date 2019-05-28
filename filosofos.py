@@ -10,6 +10,7 @@ rank = comm.Get_rank()
 n = comm.Get_size()
 numberOfPhilosopher = n-1
 typeOfPhilosopher = []
+k = int(sys.argv[1])
 
 ##SATATES
 # 0 THINKING
@@ -69,9 +70,10 @@ def eat(pos):
         #print('--------------------------------------------------------------soy ',pos,' y voy a comer !!!')
         #sys.stdout.flush()
         state[pos] = 2 #comiendo
-        for j in list(range(0,int(kPro[0]))):
-            rand = random.randrange(2,5)
-            time.sleep(rand)
+        #for j in list(range(0,int(kPro[0]))):
+        rand = random.randrange(2,5)
+        time.sleep(rand)
+        kPro[pos] = kPro[pos] -1
             #print('---------------------------------------------------------- soy',pos, 'termine el trabajo ',j)
             #sys.stdout.flush()
         state[pos] = 0 #se va a pensar
@@ -141,7 +143,7 @@ typePhilo = typePhilo[init:init+numberOfPhilosopher]
 init = init+numberOfPhilosopher
 
 kPro = np.ndarray(buffer=buf, dtype='d', shape=(size,))
-kPro= kPro[init:init+1]
+kPro= kPro[init:init+numberOfPhilosopher]
 ##FINISH
 
 
@@ -154,6 +156,7 @@ if rank == 0:
         forks1[i] = 0
         leftFork1[i] = 0
         typePhilo[i] = 1 #amigable
+        kPro[i] = k
         #forks.append('0 | x')
         #leftFork.append('x')
 
@@ -167,8 +170,8 @@ if rank == 0:
                 typePhilo[randNumber] = 2 #ambicioso
                 break
 
-    print('digite el k para los filosofos:')
-    kPro[0] = input()          
+    #print('digite el k para los filosofos:')
+    #kPro[0] = input()          
 
 
 if rank == 0:
@@ -181,13 +184,14 @@ mutex[0] = 1# initialize mutex availabel
 
 if rank == 0:
     count = 0
-    while True:
+    sw = True
+    while sw:
         count += 1
         time.sleep(1)
         showForks = []
         showLeftFork = []
         showState = []
-
+        count = 0
         for i in list(range(0,numberOfPhilosopher)):
             if forks1[i] == 0:
                 showForks.append('0 | 0')
@@ -205,22 +209,31 @@ if rank == 0:
                 showState.append('pensando')
             elif state[i] == 1:
                 showState.append('hambriento')
-            else:
+            elif state[i] == 2:
                 showState.append('COMIENDO')
+            else:     
+                showState.append('finalizo')
+                count +=1
 
+            if count == numberOfPhilosopher:
+                sw =False    
 
         t = Texttable()
         t.add_rows([typeOfPhilosopher,showForks,showLeftFork,showState])
         print('table: ',count)
         print (t.draw())
         sys.stdout.flush()
-        
+    
+    print('El programa a terminado')
+    sys.stdout.flush()
 else:  
     pos = rank -1
     #K= input()
-    while True :
+    while kPro[pos] != 0:
         think(pos)
         #print('soy',pos,'voy intentar tomar cubiertos')
         take_forks(pos)
         eat(pos)
         put_forks(pos)
+
+    state[pos] = 4    
