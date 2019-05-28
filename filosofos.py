@@ -9,6 +9,7 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 n = comm.Get_size()
 numberOfPhilosopher = n-1
+typeOfPhilosopher = []
 
 ##SATATES
 # 0 THINKING
@@ -18,17 +19,16 @@ numberOfPhilosopher = n-1
 def think(pos):
     state[pos] = 0
     rand = random.randrange(7,10)
-    print('soy el proceso ',pos,'y voy a pensar por ', rand)
+    #print('soy el proceso ',pos,'y voy a pensar por ', rand)
     sys.stdout.flush()
     time.sleep(rand)
-    print('soy el proceso ',pos,' tengo hambre')
+    #print('soy el proceso ',pos,' tengo hambre')
     sys.stdout.flush()
 
 def take_forks(pos):
     down_mutex(pos) # enter critical region
-    #print('rank ',rank,'TERMINE DE ESPERAR')
+    print('----------------------------------------------------soy',pos,'INTENTARE TOMAR CUBIERTOS')
     #sys.stdout.flush()
-    #time.sleep(5)
     state[pos] = 1 # Hungry
     test(pos) 
     up_mutex()
@@ -44,6 +44,7 @@ def test(pos):
             if (forks1[pos] == 1):
                 if (leftFork1[right]==0):
                     forks1[pos] = 2
+                    leftFork1[right] = 1
                     break
                 elif not ceroIntetos:
                     break
@@ -59,25 +60,28 @@ def test(pos):
             if (forks1[pos] == 1):
                 if (leftFork1[right] == 0):
                     forks1[pos] = 2
+                    leftFork1[right] = 1
                     break 
-
 
 def eat(pos):
     if (forks1[pos] == 2):
-        print('soy ',pos,' y voy a comer !!!')
+        print('--------------------------------------------------------------soy ',pos,' y voy a comer !!!')
         sys.stdout.flush()
         state[pos] = 2 #comiendo
         rand = random.randrange(2,5)
         time.sleep(rand)
-        
     else:
-        print('soy ',pos,' y no pude comer')
-        sys.stdout.flush()    
+        print('--------------------------------------------------------------soy ',pos,' y no pude comer')
+        sys.stdout.flush()  
 
 def put_forks(pos):
+    right = (pos+1)%(numberOfPhilosopher)
     leftFork1[pos] = 0
+    leftFork1[right] = 0
     forks1[pos] = 0
-
+    print('---------------------------------------------------------- soy',pos, 'y acabo de terminar de comer')
+    sys.stdout.flush()
+    
 def down_mutex(pos):
     while True: 
         if mutex[0] == 1:
@@ -97,33 +101,44 @@ if rank == 0:
     nbytes = size * itemsize 
 else: 
     nbytes = 0
+
 # on rank 0, create the shared block
 # on rank 1 get a handle to it (known as a window in MPI speak)
-win = MPI.Win.Allocate_shared(nbytes, itemsize, comm=comm) 
+win = MPI.Win.Allocate_shared(nbytes, itemsize, comm=comm)
+
 # create a numpy array whose data points to the shared mem
 buf, itemsize = win.Shared_query(0) 
 assert itemsize == MPI.DOUBLE.Get_size() 
+
 mutex = np.ndarray(buffer=buf, dtype='d', shape=(size,))
 mutex = mutex[:1]
-typePhilo = np.ndarray(buffer=buf, dtype='d', shape=(size,))
-typePhilo = typePhilo[:numberOfPhilosopher]
+
 state = np.ndarray(buffer=buf, dtype='d', shape=(size,))
-state = state[:numberOfPhilosopher]
+state = state[1:numberOfPhilosopher+1]
+init = numberOfPhilosopher+1
+
 forks1 = np.ndarray(buffer=buf, dtype='d', shape=(size,))
-forks1 = forks1[:numberOfPhilosopher]
+forks1 = forks1[init:init+numberOfPhilosopher]
+init = init+numberOfPhilosopher
+
 leftFork1 = np.ndarray(buffer=buf, dtype='d', shape=(size,))
-leftFork1 = leftFork1[:numberOfPhilosopher]
+leftFork1 = leftFork1[init:init+numberOfPhilosopher]
+init = init+numberOfPhilosopher
+
+typePhilo = np.ndarray(buffer=buf, dtype='d', shape=(size,))
+typePhilo = typePhilo[init:init+numberOfPhilosopher]
 ##FINISH
 
 
 if rank == 0:
     t = Texttable()
-    typeOfPhilosopher = []
 
     for i in list(range(0,numberOfPhilosopher)): 
         typeOfPhilosopher.append('Filosofo ' + str(i) + ' Amigable')
+        state[i] = 0
+        forks1[i] = 0
+        leftFork1[i] = 0
         typePhilo[i] = 1 #amigable
-        #state[i] = 0
         #forks.append('0 | x')
         #leftFork.append('x')
 
@@ -135,52 +150,57 @@ if rank == 0:
                 ant=randNumber
                 typeOfPhilosopher[randNumber] = 'Filosofo ' + str(randNumber) + ' Ambicioso'
                 typePhilo[randNumber] = 2 #ambicioso
-                break
-    
-    
+                break         
 
-comm.barrier()
-print('todos llegaron hasta aqui')
-sys.stdout.flush()
-mutex[0] = 1 # initialize mutex availabel
+if rank == 0:
+    comm.barrier()
+else:
+    time.sleep(1)
+    comm.barrier()
+
+mutex[0] = 1# initialize mutex availabel
 
 if rank == 0:
     count = 0
-    t = Texttable()
-    t.add_rows([typeOfPhilosopher,state,typePhilo])
-    print('table: ',count)
-    print (t.draw())
     while True:
-        
         count += 1
         time.sleep(1)
-        #print(typeOfPhilosopher)
-        #print(forks1)
-        #print(leftFork1)
-        #print(state[:5])
-        print(mutex)
-        sys.stdout.flush()
-        print('state:',state)
-        sys.stdout.flush()        
-        print('type:',typePhilo)
+        showForks = []
+        showLeftFork = []
+        showState = []
+
+        for i in list(range(0,numberOfPhilosopher)):
+            if forks1[i] == 0:
+                showForks.append('0 | 0')
+            elif forks1[i] == 1:
+                showForks.append('x | 0')   
+            else:
+                showForks.append('x | x') 
+
+            if leftFork1[i] == 0:
+                showLeftFork.append('libre') 
+            else:        
+                showLeftFork.append('ocupado')
+
+            if state[i] == 0:
+                showState.append('pensando')
+            elif state[i] == 1:
+                showState.append('hambriento')
+            else:
+                showState.append('COMIENDO')
+
+
+        t = Texttable()
+        t.add_rows([typeOfPhilosopher,showForks,showLeftFork,showState])
+        print('table: ',count)
+        print (t.draw())
         sys.stdout.flush()
         
-        #t = Texttable()
-        #t.add_rows([typeOfPhilosopher,state])
-        #print('table: ',count)
-        #print (t.draw())
-        sys.stdout.flush()
-        
-else:
-    #print('Filosofo numero ',rank, 'acaba de despertar')    
+else:  
     pos = rank -1
     while True :
-        #PENSANDO
         think(pos)
-        print('soy',pos,' voy intentar tomar cubiertos')
+        #print('soy',pos,'voy intentar tomar cubiertos')
         take_forks(pos)
         eat(pos)
         put_forks(pos)
-
-
-
