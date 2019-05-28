@@ -5,6 +5,8 @@ import numpy as np
 import time
 import sys
 
+##CODE MADE BY WILLIAM CADENAS :D
+
 comm = MPI.COMM_WORLD 
 rank = comm.Get_rank()
 n = comm.Get_size()
@@ -110,7 +112,9 @@ def up_mutex():
 size = 1000 
 itemsize = MPI.DOUBLE.Get_size() 
 #print('itemsize', itemsize)
-if rank == 0: 
+if rank == 0:
+    print('aguarde un momento, estamos inicializando los procesos...')
+    sys.stdout.flush() 
     nbytes = size * itemsize 
 else: 
     nbytes = 0
@@ -183,10 +187,10 @@ else:
 mutex[0] = 1# initialize mutex availabel
 
 if rank == 0:
-    count = 0
+    countTable = 0
     sw = True
     while sw:
-        count += 1
+        countTable += 1
         time.sleep(1)
         showForks = []
         showLeftFork = []
@@ -220,7 +224,7 @@ if rank == 0:
 
         t = Texttable()
         t.add_rows([typeOfPhilosopher,showForks,showLeftFork,showState])
-        print('table: ',count)
+        print('table: ',countTable)
         print (t.draw())
         sys.stdout.flush()
     
