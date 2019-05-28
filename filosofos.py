@@ -26,8 +26,7 @@ def think(pos):
 
 def take_forks(pos):
     down_mutex(pos) # enter critical region
-    print('----------------------------------------------------soy',pos,'INTENTARE TOMAR CUBIERTOS')
-    sys.stdout.flush()
+    #print('----------------------------------------------------soy',pos,'INTENTARE TOMAR CUBIERTOS')
     #sys.stdout.flush()
     state[pos] = 1 # Hungry
     test(pos) 
@@ -50,8 +49,8 @@ def test(pos):
                     break
                 else:    
                     rand = random.randrange(5,15)
-                    print('----------------------------------------------------soy',pos,'INTENTARE TOMAR CUBIERTO DERECHO DENTRO DE', rand)
-                    sys.stdout.flush()
+                    #print('----------------------------------------------------soy',pos,'INTENTARE TOMAR CUBIERTO DERECHO DENTRO DE', rand)
+                    #sys.stdout.flush()
                     time.sleep(rand)
                     ceroIntetos = False
     else:    
@@ -67,21 +66,22 @@ def test(pos):
 
 def eat(pos):
     if (forks1[pos] == 2):
-        print('--------------------------------------------------------------soy ',pos,' y voy a comer !!!')
-        sys.stdout.flush()
+        #print('--------------------------------------------------------------soy ',pos,' y voy a comer !!!')
+        #sys.stdout.flush()
         state[pos] = 2 #comiendo
         for j in list(range(0,int(kPro[0]))):
             rand = random.randrange(2,5)
             time.sleep(rand)
-            print('---------------------------------------------------------- soy',pos, 'termine el trabajo ',j)
-            sys.stdout.flush()
+            #print('---------------------------------------------------------- soy',pos, 'termine el trabajo ',j)
+            #sys.stdout.flush()
         state[pos] = 0 #se va a pensar
-        print('---------------------------------------------------------- soy',pos, 'y acabo de terminar de comer')
-        sys.stdout.flush()
-    else:
-        print('--------------------------------------------------------------soy ',pos,' y no pude comer asi que ire a pensar con hambre')
-        sys.stdout.flush()  
+        #print('---------------------------------------------------------- soy',pos, 'y acabo de terminar de comer')
+        #sys.stdout.flush()
+    #else:
+        #print('--------------------------------------------------------------soy ',pos,' y no pude comer asi que ire a pensar con hambre')
+        #sys.stdout.flush()  
         #se va a pensar pero sigue con hambre 
+        
 
 def put_forks(pos):
     if state[pos] == 1: #todavia tiene hambre
