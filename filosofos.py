@@ -12,6 +12,7 @@ rank = comm.Get_rank()
 n = comm.Get_size()
 numberOfPhilosopher = n-1
 typeOfPhilosopher = []
+
 k = int(sys.argv[1])
 
 ##SATATES
@@ -19,32 +20,31 @@ k = int(sys.argv[1])
 # 1 HUNGRY
 # 2 EATING 
 
+##Forks1
+# 0 no tiene cuebiertos
+# 1 tiene el izq
+# 2 tiene los dos cuebiertos 
+
 def think(pos):
     rand = random.randrange(7,10)
-    #print('soy el proceso ',pos,'y voy a pensar por ', rand)
-    #sys.stdout.flush()
     time.sleep(rand)
-    #print('soy el proceso ',pos,' tengo hambre')
-    #sys.stdout.flush()
 
 def take_forks(pos):
-    down_mutex(pos) # enter critical region
-    #print('----------------------------------------------------soy',pos,'INTENTARE TOMAR CUBIERTOS')
-    #sys.stdout.flush()
     state[pos] = 1 # Hungry
     test(pos) 
-    up_mutex()
 
 def test(pos):
-    right = (pos+1)%(numberOfPhilosopher)
-    if (typePhilo[pos] == 1):
+    right = (pos+1) % (numberOfPhilosopher)
+            
+    if (typePhilo[pos] == 1): #amigable
         ceroIntetos = True
         while True:  
-            if (leftFork1[pos]==0):
+            if (leftFork1[pos] == 0):
                 leftFork1[pos]= 1
                 forks1[pos] = 1
+
             if (forks1[pos] == 1):
-                if (leftFork1[right]==0):
+                if (leftFork1[right] == 0):
                     forks1[pos] = 2
                     leftFork1[right] = 1
                     break
@@ -52,12 +52,10 @@ def test(pos):
                     break
                 else:    
                     rand = random.randrange(5,15)
-                    #print('----------------------------------------------------soy',pos,'INTENTARE TOMAR CUBIERTO DERECHO DENTRO DE', rand)
-                    #sys.stdout.flush()
-                    time.sleep(rand)
+                    time.sleep(rand) #tiempo de espera
                     ceroIntetos = False
     else:    
-        while True:  
+        while True: # ambiciosos
             if (leftFork1[pos]==0):
                 leftFork1[pos]= 1
                 forks1[pos] = 1
@@ -69,42 +67,23 @@ def test(pos):
 
 def eat(pos):
     if (forks1[pos] == 2):
-        #print('--------------------------------------------------------------soy ',pos,' y voy a comer !!!')
-        #sys.stdout.flush()
         state[pos] = 2 #comiendo
-        #for j in list(range(0,int(kPro[0]))):
+
         rand = random.randrange(2,5)
-        time.sleep(rand)
-        kPro[pos] = kPro[pos] -1
-            #print('---------------------------------------------------------- soy',pos, 'termine el trabajo ',j)
-            #sys.stdout.flush()
-        state[pos] = 0 #se va a pensar
-        #print('---------------------------------------------------------- soy',pos, 'y acabo de terminar de comer')
-        #sys.stdout.flush()
-    #else:
-        #print('--------------------------------------------------------------soy ',pos,' y no pude comer asi que ire a pensar con hambre')
-        #sys.stdout.flush()  
-        #se va a pensar pero sigue con hambre 
-        
+        time.sleep(rand) # comiendo !!!!!!!!!!!!!!
+
+        kPro[pos] = kPro[pos] - 1
+        state[pos] = 0 #regresa a pensar
 
 def put_forks(pos):
     if state[pos] == 1: #todavia tiene hambre
         forks1[pos] = 0
         leftFork1[pos] = 0
-    elif state[pos] == 0:    
+    elif state[pos] == 0:  #ya comio    
         right = (pos+1)%(numberOfPhilosopher)
         leftFork1[pos] = 0
         leftFork1[right] = 0
         forks1[pos] = 0
-
-def down_mutex(pos):
-    while True: 
-        if mutex[0] == 1:
-            mutex[0] = 0 #bloquea el mutex 
-            break
-
-def up_mutex():
-    mutex[0] = 1
 
 ## ALL THIS CODE IS FOR THE MUTAL INFO
 
@@ -150,19 +129,16 @@ kPro = np.ndarray(buffer=buf, dtype='d', shape=(size,))
 kPro= kPro[init:init+numberOfPhilosopher]
 ##FINISH
 
-
 if rank == 0:
     t = Texttable()
 
     for i in list(range(0,numberOfPhilosopher)): 
         typeOfPhilosopher.append('Filosofo ' + str(i) + ' Amigable')
-        state[i] = 0
-        forks1[i] = 0
-        leftFork1[i] = 0
+        state[i] = 0 #think
+        forks1[i] = 0 #cero cubiertos
+        leftFork1[i] = 0 #
         typePhilo[i] = 1 #amigable
         kPro[i] = k
-        #forks.append('0 | x')
-        #leftFork.append('x')
 
     ant=-1
     for i in list(range(2)):
@@ -172,11 +148,7 @@ if rank == 0:
                 ant=randNumber
                 typeOfPhilosopher[randNumber] = 'Filosofo ' + str(randNumber) + ' Ambicioso'
                 typePhilo[randNumber] = 2 #ambicioso
-                break
-
-    #print('digite el k para los filosofos:')
-    #kPro[0] = input()          
-
+                break        
 
 if rank == 0:
     comm.barrier()
@@ -195,7 +167,8 @@ if rank == 0:
         showForks = []
         showLeftFork = []
         showState = []
-        count = 0
+
+        count = 0 #reset
         for i in list(range(0,numberOfPhilosopher)):
             if forks1[i] == 0:
                 showForks.append('0 | 0')
@@ -220,7 +193,7 @@ if rank == 0:
                 count +=1
 
             if count == numberOfPhilosopher:
-                sw =False    
+                sw = False    
 
         t = Texttable()
         t.add_rows([typeOfPhilosopher,showForks,showLeftFork,showState])
@@ -230,14 +203,12 @@ if rank == 0:
     
     print('El programa a terminado')
     sys.stdout.flush()
-else:  
-    pos = rank -1
-    #K= input()
+else: #otros procesos 
+    pos = rank -1 # rank > 1 son filosofos 
     while kPro[pos] != 0:
         think(pos)
-        #print('soy',pos,'voy intentar tomar cubiertos')
         take_forks(pos)
         eat(pos)
         put_forks(pos)
 
-    state[pos] = 4    
+    state[pos] = 4 # Finalizado   
